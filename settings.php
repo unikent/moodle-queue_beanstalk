@@ -26,9 +26,26 @@
 defined('MOODLE_INTERNAL') || die;
 
 if ($hassiteconfig) {
+    $settings->add(new admin_setting_configtext(
+        'queue_beanstalk/hostname', get_string('hostname', 'queue_beanstalk'), '', 'localhost')
+    );
+
+    $settings->add(new admin_setting_configtext(
+        'queue_beanstalk/port', get_string('port', 'queue_beanstalk'), '', '11300')
+    );
+
+    $settings->add(new admin_setting_configtext(
+        'queue_beanstalk/timeout', get_string('timeout', 'queue_beanstalk'), '', '300')
+    );
+
+    $settings->add(new admin_setting_configtext(
+        'queue_beanstalk/tubename', get_string('tubename', 'queue_beanstalk'), '', 'moodle')
+    );
+
+
     $ADMIN->add('reports', new admin_externalpage(
         'beanstalktaskstats',
-        'Beanstalk stats',
+        get_string('pluginname', 'queue_beanstalk'),
         new \moodle_url("/admin/tool/adhoc/queue/beanstalk/index.php")
     ));
 }

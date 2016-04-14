@@ -25,3 +25,7 @@
 
 $string['pluginname'] = 'Beanstalk';
 $string['plugindesc'] = 'A beanstalk queuing plugin.';
+$string['hostname'] = 'Hostname';
+$string['port'] = 'Port';
+$string['timeout'] = 'Timeout (ms)';
+$string['tubename'] = 'Tube name';

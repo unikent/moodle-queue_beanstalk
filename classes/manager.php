@@ -51,23 +51,23 @@ class manager
      * Constructor.
      */
     public function __construct() {
-        $this->config = get_config('tool_adhoc');
-        $this->enabled = isset($this->config->beanstalk_enabled) && $this->config->beanstalk_enabled;
-        if (isset($this->config->beanstalk_unavailable)) {
-            if (time() - $this->config->beanstalk_unavailable < 18000) {
+        $this->config = get_config('queue_beanstalk');
+        $this->enabled = \tool_adhoc\manager::is_enabled('beanstalk');
+        if (isset($this->config->unavailable)) {
+            if (time() - $this->config->unavailable < 18000) {
                 // Beanstalk has been down in the last 5 minutes, don't try it.
                 $this->enabled = false;
             } else {
-                unset_config('beanstalk_unavailable', 'tool_adhoc');
+                unset_config('unavailable', 'queue_beanstalk');
             }
         }
 
         try {
             if ($this->enabled) {
                 $this->api = new Pheanstalk(
-                    $this->config->beanstalk_hostname,
-                    $this->config->beanstalk_port,
-                    $this->config->beanstalk_timeout
+                    $this->config->hostname,
+                    $this->config->port,
+                    $this->config->timeout
                 );
             }
         } catch (\Exception $e) {
@@ -91,7 +91,7 @@ class manager
         } catch (\Pheanstalk\Exception\ConnectionException $e) {
             // Not ready?
             $this->enabled = false;
-            set_config('beanstalk_unavailable', time(), 'tool_adhoc');
+            set_config('unavailable', time(), 'queue_beanstalk');
         }
 
         return $result;
@@ -108,7 +108,7 @@ class manager
      * Return our tube name.
      */
     public function get_tube() {
-        return $this->config->beanstalk_tubename;
+        return $this->config->tubename;
     }
 
     /**
