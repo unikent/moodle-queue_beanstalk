@@ -77,6 +77,20 @@ class manager
     }
 
     /**
+     * Push a task onto the queue.
+     *
+     * @param  int $id  ID of the adhoc task.
+     * @param  string $method Method name.
+     * @param  array  $args   Arguments to pass to the method.
+     * @return [type]         [description]
+     */
+    public static function push($id, $priority = PheanstalkInterface::DEFAULT_PRIORITY, $timeout = 900, $delay = PheanstalkInterface::DEFAULT_DELAY) {
+        return $this->putInTube($this->get_tube(), json_encode(array(
+            'id' => $id
+        )), $priority, $delay, $timeout);
+    }
+
+    /**
      * Magic.
      */
     public function __call($method, $arguments) {
@@ -112,26 +126,6 @@ class manager
     }
 
     /**
-     * Tell our workers to do something.
-     *
-     * @param string $class    The fully qualified class name of the worker to initialize.
-     * @param string $method   The method name on the worker to run.
-     * @param array  $args     The args to send the above method.
-     * @param int    $priority From 0 (most urgent) to 0xFFFFFFFF (least urgent)
-     * @param int    $delay    Seconds to wait before job becomes ready
-     * @param int    $timeout  Time To Run: seconds a job can be reserved for
-     */
-    public function add_job($class, $method, $args = array(), $timeout = 900,
-                            $priority = PheanstalkInterface::DEFAULT_PRIORITY,
-                            $delay = PheanstalkInterface::DEFAULT_DELAY) {
-        return $this->putInTube($this->get_tube(), json_encode(array(
-            'class' => $class,
-            'method' => $method,
-            'args' => $args
-        )), $priority, $delay, $timeout);
-    }
-
-    /**
      * Initialize worker.
      */
     public function become_worker() {
@@ -157,10 +151,8 @@ class manager
                 exit(1);
             }
 
-            $received = json_decode($job->getData(), true);
-
-            // Structure check.
-            if (!is_array($received) || !isset($received['class']) || !isset($received['method'])) {
+            $received = json_decode($job->getData());
+            if (!isset($received->id)) {
                 cli_writeln("Received invalid job: " . json_encode($received));
                 $this->delete($job);
 
@@ -168,36 +160,12 @@ class manager
             }
 
             // We have something to do!
-            $args = isset($received['args']) ? $received['args'] : array();
-            $class = $received['class'];
-
-            // Run!
-            try {
-                $obj = new $class();
-                $ret = call_user_func_array(array($obj, $received['method']), $args);
-                if ($ret === false) {
-                    cli_writeln("Invalid class: " . json_encode($received));
-                } else {
-                    switch ($ret) {
-                        case \tool_adhoc\manager::STATUS_RETRY:
-                            // The user function is telling us to retry this one.
-                            $this->release($job);
-                        break;
-
-                        case \tool_adhoc\manager::STATUS_ERROR:
-                            cli_writeln("Job threw handled error");
-                            $this->bury($job);
-                        break;
-
-                        case \tool_adhoc\manager::STATUS_OK:
-                        default:
-                            $this->delete($job);
-                        break;
-                    }
-                }
-            } catch (\Exception $e) {
-                print_r($received);
-                cli_writeln("Exception thrown in user function: " . $e->getMessage());
+            $task = $DB->get_record('task_adhoc', array('id' => $received->id));
+            if ($task) {
+                \tool_adhoc\manager::run_tasks(array($task), true);
+                $this->delete($job);
+            } else {
+                cli_writeln("Could not find task {$received->id}.");
                 $this->delete($job);
             }
 
@@ -218,29 +186,5 @@ class manager
             $splunk = \logstore_splunk\splunk::instance();
             $splunk->flush();
         }
-    }
-
-    /**
-     * Hook for custom tasks.
-     */
-    public static function queue_custom_task($class, $method, $args = array(), $priority = PheanstalkInterface::DEFAULT_PRIORITY) {
-        $beanstalk = new static();
-        if ($beanstalk->is_ready()) {
-            $beanstalk->add_job($class, $method, $args, 900, $priority);
-        }
-    }
-
-    /**
-     * Hook for queue_adhoc_task.
-     */
-    public static function queue_adhoc_task($id, $priority = PheanstalkInterface::DEFAULT_PRIORITY) {
-        static::queue_custom_task('\\tool_adhoc\\jobs\\adhoc', 'run_task', array($id), $priority);
-    }
-
-    /**
-     * Hook for kick.
-     */
-    public static function kick_workers() {
-        static::queue_custom_task('\\tool_adhoc\\jobs\\adhoc', 'kick', array(microtime(true)));
     }
 }
