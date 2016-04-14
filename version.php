@@ -26,7 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'queue_beanstalk';
-$plugin->version   = 2016040100;
+$plugin->version   = 2016041300;
 $plugin->requires  = 2014051200;
 $plugin->maturity = MATURITY_STABLE;
-$plugin->release = '1.0 (Build: 2016040100)';
+$plugin->release = '1.0 (Build: 2016041300)';

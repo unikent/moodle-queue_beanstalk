@@ -44,7 +44,9 @@ $table->define_headers(array('Variable', 'Value'));
 $table->define_baseurl($PAGE->url);
 $table->setup();
 $info = $beanstalk->statsTube($beanstalk->get_tube());
-$table->add_data($info);
+foreach ($info as $k => $v) {
+    $table->add_data(array($k, $v));
+}
 $table->finish_output();
 
 echo $OUTPUT->heading('Beanstalk stats', 2);
@@ -57,7 +59,9 @@ $table->define_headers(array('Variable', 'Value'));
 $table->define_baseurl($PAGE->url);
 $table->setup();
 $info = $beanstalk->stats();
-$table->add_data($info);
+foreach ($info as $k => $v) {
+    $table->add_data(array($k, $v));
+}
 $table->finish_output();
 
 echo $OUTPUT->footer();

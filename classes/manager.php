@@ -36,13 +36,8 @@ use Pheanstalk\PheanstalkInterface;
  * @copyright 2016 University of Kent
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class manager
+class manager implements \tool_adhoc\queue
 {
-    const STATUS_OK = 0;
-    const STATUS_ERROR = 1;
-    const STATUS_RETRY = 2;
-    const STATUS_BURY = 4;
-
     private $config;
     private $enabled;
     private $api;
@@ -77,14 +72,15 @@ class manager
     }
 
     /**
-     * Push a task onto the queue.
+     * Push an item onto the queue.
      *
-     * @param  int $id  ID of the adhoc task.
-     * @param  string $method Method name.
-     * @param  array  $args   Arguments to pass to the method.
-     * @return [type]         [description]
+     * @param  int $id       ID of the adhoc task.
+     * @param  int $priority Priority (higher = lower priority)
+     * @param  int $timeout  Timeout for the task to complete.
+     * @param  int $delay    Delay before executing task.
+     * @return bool          [description]
      */
-    public static function push($id, $priority = PheanstalkInterface::DEFAULT_PRIORITY, $timeout = 900, $delay = PheanstalkInterface::DEFAULT_DELAY) {
+    public function push($id, $priority = PheanstalkInterface::DEFAULT_PRIORITY, $timeout = 900, $delay = PheanstalkInterface::DEFAULT_DELAY) {
         return $this->putInTube($this->get_tube(), json_encode(array(
             'id' => $id
         )), $priority, $delay, $timeout);
